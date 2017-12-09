@@ -1,0 +1,19 @@
+body {
+  margin: 0;
+  padding: 0;
+}
+
+#canvas {
+  display: block;
+  width: 500px;
+  height: 400px;
+  background-color: skyblue;
+}
+
+.hide {
+  display: none;
+}
+
+.show {
+  display: block;
+}
