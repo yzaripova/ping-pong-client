@@ -6,25 +6,31 @@
   <link rel="stylesheet" type="text/css" href="style.css">
 </head>
 <body>
+  <header></header>
   <div class="login">
-    <form id="form">
-      <label for="">Name</label>
-      <input type="text" name="name">
-      <label for="">Email</label>
-      <input type="email" name="email">
-      <button type="submit">Send</button>
-    </form>
+    <div>
+      <h1>PING PONG ONLINE</h1>
+      <form id="form">
+        <input type="text" name="name" placeholder="Name">
+        <input type="email" name="email" placeholder="Email">
+        <button type="submit">PLAY</button>
+      </form>
+      <div class="background"></div>
+    </div>
   </div>
 
   <div class="lobby hide">
-    <div class="lobby-header">
+    <h3>PING PONG ONLINE</h3>
+    <div class="">
       <div class="first-player"></div>
-      <div class="score">0:0</div>
       <div class="second-player"></div>
     </div>
     <button class="btn-ready">Ready</button>
-    <canvas id="canvas"></canvas>
   </div>
+   <div class="playing-field hide">
+     <h3>PING PONG ONLINE</h3>
+     <canvas id="canvas"></canvas>
+   </div>
   <script type="text/javascript" src="app.js"></script>
 </body>
 </html>
