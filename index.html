@@ -13,7 +13,7 @@
       <form id="form">
         <input type="text" name="name" placeholder="Name">
         <input type="email" name="email" placeholder="Email">
-        <button type="submit">PLAY</button>
+        <button type="submit" class="btn">PLAY</button>
       </form>
       <div class="background"></div>
     </div>
@@ -21,16 +21,19 @@
 
   <div class="lobby hide">
     <h3>PING PONG ONLINE</h3>
-    <div class="">
+    <div class="subtitle">Lobby</div>
+    <div class="players-info">
       <div class="first-player"></div>
       <div class="second-player"></div>
     </div>
-    <button class="btn-ready">Ready</button>
+    <button class="btn btn-ready">Ready</button>
   </div>
+
    <div class="playing-field hide">
      <h3>PING PONG ONLINE</h3>
      <canvas id="canvas"></canvas>
    </div>
+
   <script type="text/javascript" src="app.js"></script>
 </body>
 </html>

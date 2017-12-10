@@ -45,12 +45,22 @@ function onShowGame() {
 
 function onLoadFirstPlayerInfo(info) {
   const firstPlayerElement = document.querySelector('.first-player');
-  firstPlayerElement.textContent = info.name;
+  gerenatePlayerInfoHtml(firstPlayerElement, info);
+  //firstPlayerElement.textContent = info.name || 'Anonymous';
 }
 
 function onLoadSecondPlayerInfo(info) {
   const secondPlayerElement = document.querySelector('.second-player');
-  secondPlayerElement.textContent = info.name;
+  gerenatePlayerInfoHtml(secondPlayerElement, info);
+  //secondPlayerElement.textContent = info.name || 'Anonymous';
+}
+
+function gerenatePlayerInfoHtml(domElement, info) {
+  let html = `<div>${info.name || 'Anonymous'} <br>
+              <span class="email">${info.email || ''}</span>
+              </div>
+              <img src='img/noavatar.png'>`;
+  domElement.innerHTML =html;
 }
 
 function onSendMessage(data) {
