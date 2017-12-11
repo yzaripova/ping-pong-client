@@ -45,16 +45,13 @@ function onUpdateData(event) {
   }
 
   if (message.event && message.event === 'get-ready') {
-    /*generatePlayingField(message.meta, message.game)
-    onShowGame()*/
-  }
-
-  if (message.event && message.event === 'started') {
+    showTimer(message.countdown);
+    document.querySelector('body').classList.add('loading');
     canvas.width = message.options.fieldSize.x;
     canvas.height = message.options.fieldSize.y;
-    paddles.push(new Paddle("bottom", message.options.racketWidth, 
+    paddles.push(new Paddle('bottom', message.options.racketWidth, 
       message.options.racketThickness));
-    paddles.push(new Paddle("top", message.options.racketWidth, 
+    paddles.push(new Paddle('top', message.options.racketWidth, 
       message.options.racketThickness));
 
     gameInfo = message.game;
@@ -62,6 +59,10 @@ function onUpdateData(event) {
 
     drawPlayingField(message.options, message.game);
     onShowGame();
+  }
+
+  if (message.event && message.event === 'started') {
+    document.querySelector('body').classList.remove('loading');
   }
 }
 
@@ -135,6 +136,21 @@ function updatePosition(event) {
   }
 
   drawPlayingField(options, gameInfo);
+}
+
+function showTimer(time) {
+  const loadingInfoElement = document.querySelector('.loading-info div');
+  let timeSecond = time / 1000;
+  loadingInfoElement.textContent = timeSecond;
+  let timerId = setInterval(function() {
+    timeSecond--;
+    loadingInfoElement.textContent = timeSecond;
+  }, 1000);
+
+  setTimeout(function() {
+    clearInterval(timerId);
+    loadingInfoElement.textContent = '';
+  }, time);
 }
 
 function onLoadFirstPlayerInfo(info) {
