@@ -101,7 +101,7 @@ function onUpdateData(event) {
     resetGame();
     opponentUserInfo = null;
     document.querySelector('.second-player')
-            .innerHTML(`<div class="waiting">Waiting opponent...</div>`);
+            .innerHTML(`<div class="waiting">Waiting for opponent...</div>`);
   }
 }
 
@@ -359,14 +359,16 @@ function generatePlayerInfoHtml(domElement, info) {
 function generatePlayerInfoWithScoreHtml(players) {
   const playersAndScoreElement = document.querySelector('.players-and-score');
   let currentUserInfo = getlocalStorageUserInfo();
+  let imgCurrentUser = currentUserInfo.email === '' ? gravatar(currentUserInfo.email, {size: 200}) : 'img/noavatar.png';
+  let imgOpponentUser = opponentUserInfo.email === '' ? gravatar(opponentUserInfo.email, {size: 200}) : 'img/noavatar.png';
   let html = 
   `<div class="player">
-    <img src='img/noavatar.png'>
+    <img src=${imgCurrentUser}>
     <div class="name">${currentUserInfo.name || 'Anonymous'}</div>
   </div>
   <div class="score">0 : 0</div>
   <div class="player">
-    <img src='img/noavatar.png'>
+    <img src=${imgOpponentUser}>
     <div class="name">${opponentUserInfo.name || 'Anonymous'}</div>
   </div>`;
 
