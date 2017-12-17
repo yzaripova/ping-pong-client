@@ -80,6 +80,10 @@ body {
   user-select: none;
 }
 
+.btn:disabled {
+  opacity: 0.4;
+}
+
 .lobby, .playing-field {
   padding: 40px 50px;
 }
@@ -96,7 +100,7 @@ body {
   margin-bottom: 25px;
 }
 
-.lobby .players-info {
+.lobby .players-info{
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -174,10 +178,34 @@ body {
   margin: 0 auto;
 }
 
+.playing-field {
+  text-align: center;
+}
+
+.players-and-score {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+}
+
+.players-and-score .player img {
+  width: 40px;
+}
+
+.players-and-score .score {
+  font-size: 80px;
+  padding: 0 30px;
+}
+
 .hide {
   display: none;
 }
 
 .show {
   display: block;
+}
+
+#canvas {
+  transform: perspective(670px) rotateX(41deg) translateY(-52px);
 }

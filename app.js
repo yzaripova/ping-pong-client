@@ -6,15 +6,18 @@ let ws;
 let formElement;
 let canvas;
 let ctx;
-let paddles = [];
 let options;
 let gameInfo;
-let fps;
-let lastKeyDownCode;
-let isAnimating;
+let stopToken = { stop: true };
+let shouldSyncPaddlePosition = false;
+let pressedKeyCode;
+let currentUserId;
+let opponentUserInfo = {name: '', email: ''};
 
 function init() {
-  ws = new WebSocket('ws://localhost:3001');
+  //ws = new WebSocket('wss://ping-pong-server.herokuapp.com');
+  //ws = new WebSocket('ws://localhost:3000');
+  ws = new WebSocket('wss://ping-pong.10100111.space');
   ws.addEventListener('message', onUpdateData);
 
   formElement = document.getElementById('form');
@@ -26,14 +29,17 @@ function init() {
 
   canvas = document.getElementById('canvas');
   ctx = canvas.getContext('2d');
-  document.addEventListener('keydown', updatePaddlePosition, false);
+  document.addEventListener('keydown', onKeyDown, false);
+  document.addEventListener('keyup', onKeyUp, false);
 }
 
 function onUpdateData(event) {
   let message = JSON.parse(event.data);
-  
-  if (message.event && message.event === 'connected') {
+
+  if (message.event === 'connected') {
     const lobbyData = message.lobby;
+    currentUserId = message.user.id;
+    setlocalStorageUserInfo(message.user.name, message.user.email);
 
     if (lobbyData.users.length > 1) {
       onLoadFirstPlayerInfo(lobbyData.users[1]);
@@ -43,57 +49,69 @@ function onUpdateData(event) {
     }
 
     onShowLobby();
-  }
-
-  if (message.event && message.event === 'user-connected') {
+  } else if (message.event === 'user-connected') {
+    opponentUserInfo = message.user;
     onLoadSecondPlayerInfo(message.user);
-  }
-
-  if (message.event && message.event === 'get-ready') {
-    showTimer(message.countdown);
-    document.querySelector('body').classList.add('loading');
-
-    canvas.width = message.options.fieldSize.x;
-    canvas.height = message.options.fieldSize.y;
-
-    paddles.push(new Paddle('bottom', message.options.racketWidth, 
-      message.options.racketThickness));
-    paddles.push(new Paddle('top', message.options.racketWidth, 
-      message.options.racketThickness));
-
+  } else if (message.event === 'get-ready') {
     gameInfo = message.game;
     options = message.options;
 
-    draw();
-    onShowGame();
-  }
+    showTimer(message.countdown);
+    document.querySelector('body').classList.add('loading');
 
-  if (message.event && message.event === 'started') {
+    canvas.width = options.fieldSize.x;
+    canvas.height = options.fieldSize.y;
+
+    console.log(
+      'Running with ' + options.fps + ' fps, '
+        + options.tickRate + ' tick rate.'
+    );
+
+    stopToken.stop = false;
+    animate({
+      fps: options.fps,
+      stopToken: stopToken
+    }, drawFrame);
+
+    onShowGame();
+  } else if (message.event === 'started') {
     document.querySelector('body').classList.remove('loading');
     gameInfo = message.game;
-    startAnimation();
-  }
+    generatePlayerInfoWithScoreHtml(gameInfo.players);
+    document.querySelector('.btn-ready').disabled  = false;
+  } else if (message.event === 'sync') {
+    if (shouldSyncPaddlePosition) {
+      let localPaddle = getMyPaddle();
+      gameInfo = message.game;
+      setMyPaddle(localPaddle);
 
-  if (message.event && message.event === 'sync') {
-    if (lastKeyDownCode) {
-      onSendUserPaddle(lastKeyDownCode);
+      shouldSyncPaddlePosition = false;
+      onSendUserPaddle();
+    } else {
+      gameInfo = message.game;
     }
+  } else if (message.event === 'score') {
+    // const timeout = message.timeout;
     gameInfo = message.game;
-    draw();
-  }
-
-  if (message.event && message.event === 'user-disconnected') {
-    onShowLobby();
-    onSendMessage({action: 'not-ready'});
+    updateScore();
+    findWin();
+  } else if (message.event === 'user-disconnected') {
+    resetGame();
+    opponentUserInfo = null;
+    document.querySelector('.second-player')
+            .innerHTML(`<div class="waiting">Waiting opponent...</div>`);
   }
 }
 
 function onShowLobby() {
+  stopToken.stop = true;
+
   const lobbyElement = document.querySelector('.lobby');
   const loginElement = document.querySelector('.login');
   const playingFieldElement = document.querySelector('.playing-field');
 
   loginElement.classList.add('hide');
+  playingFieldElement.classList.remove('show');
   playingFieldElement.classList.add('hide');
   lobbyElement.classList.remove('hide');
   lobbyElement.classList.add('show');
@@ -109,73 +127,206 @@ function onShowGame() {
   playingFieldElement.classList.add('show');
 }
 
-function startAnimation() {
-  let now;
-  let then = Date.now();
-  let delay = 1000/fps;
-  let delta;
-  isAnimating = true;
-
-  requestAnimationFrame(startAnimation);
-     
-    now = Date.now();
-    delta = now - then;
-    
-    if (delta > delay && isAnimating) {
-      then = now - (delta % delay);
-        draw();
-    }
+function resetGame() {
+  onShowLobby();
+  gameInfo = null;
 }
 
-function draw() {
+function animate(settings, callback) {
+  const fps = settings.fps || 60;
+  const delay = 1000 / fps;
+  let lastTime = Date.now();
+
+  let loop = function() {
+    if (settings.stopToken.stop === true) {
+      return;
+    }
+
+    requestAnimationFrame(loop);
+
+    const now = Date.now();
+    const elapsed = now - lastTime;
+
+    // If enough time has elapsed, draw the next frame.
+    if (elapsed >= delay) {
+      // Get ready for next frame by setting `lastTime = now`, but...
+      // `now - (elapsed % delay)` is an improvement over just
+      // using `lastTime = now`, which can end up lowering overall fps.
+      lastTime = now - (elapsed % delay);
+
+      callback();
+
+      // TESTING... Report #seconds since start and achieved fps.
+      // let sinceStart = now - startTime;
+      // let currentFps = Math.round(1000 / (sinceStart / ++frameCount) * 100) / 100;
+    }
+  };
+
+  requestAnimationFrame(loop);
+}
+
+function drawFrame() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.fillStyle = '#228b22';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   drawBall();
   drawPaddles();
-  ctx.fillRect(0, canvas.height/2 - 1, canvas.width, 2);
+  ctx.fillRect(0, (canvas.height / 2) - 1, canvas.width, 2);
+
+  predictNextFrame();
+  movePaddle();
 }
 
 function drawBall() {
   let ball = gameInfo.ball;
+
   let radius = options.ballSize / 2;
   ctx.beginPath();
   ctx.fillStyle = '#fff';
-  ctx.arc(ball.x, ball.y, radius, 0, Math.PI*2, false);
+  ctx.arc(ball.x + radius, ball.y + radius, radius, 0, Math.PI * 2);
   ctx.fill();
 }
 
+// NOTE: keep this code in sync with server's "physics".
+function predictNextFrame() {
+  let ball = gameInfo.ball;
+  let players = gameInfo.players;
+
+  if (ball.x <= 0 || ball.x >= options.fieldSize.x - 1) {
+    ball.velocity.x *= -1;
+  }
+
+  if (players.length === 2) {
+    let topPlayer = players.find(player => player.id !== currentUserId);
+    let bottomPlayer = players.find(player => player.id === currentUserId);
+
+    if (ball.y <= topPlayer.racket.y + options.racketThickness) {
+      computeHorizRacketCollision(topPlayer, ball);
+    } else if (ball.y + options.ballSize >= bottomPlayer.racket.y) {
+      computeHorizRacketCollision(bottomPlayer, ball);
+    }
+
+    if (ball.y <= 0) {
+      ball.velocity.x = 0;
+      ball.velocity.y = 0;
+    } else if (ball.y >= options.fieldSize.y - options.ballSize) {
+      ball.velocity.x = 0;
+      ball.velocity.y = 0;
+    }
+  }
+
+  ball.x += ball.velocity.x;
+  ball.y += ball.velocity.y;
+}
+
+function computeHorizRacketCollision(player, ball) {
+  const collision = ball.x > player.racket.x - options.ballSize
+        && ball.x < player.racket.x + options.racketWidth;
+
+  if (collision) {
+    ball.velocity.y *= -1;
+
+    let delta = Math.abs(player.racket.x - ball.x);
+    if (delta < options.racketWidth / 3) {
+      ball.velocity.x = -1;
+    } else if (delta < options.racketWidth * 2 / 3) {
+      ball.velocity.x = 0;
+    } else {
+      ball.velocity.x = 1;
+    }
+  }
+
+  return collision;
+}
+
 function drawPaddles() {
-  paddles.forEach(padd => {
+  gameInfo.players.forEach(player => {
+    let paddle = player.racket;
+
     ctx.fillStyle = "#fff";
-    ctx.fillRect(padd.x, padd.y, padd.w, padd.h);
+    ctx.fillRect(
+      paddle.x,
+      paddle.y,
+      options.racketWidth,
+      options.racketThickness
+    );
   });
 }
 
-function updatePaddlePosition(event) {
-  if (event.keyCode !== 37 && event.keyCode !== 39) {
-    return;
+function movePaddle() {
+  let deltaX;
+  const moveSpeed = 7;
+
+  if (pressedKeyCode === 37) {
+    deltaX = -moveSpeed;
+  } else if (pressedKeyCode === 39) {
+    deltaX = moveSpeed;
   }
 
-  lastKeyDownCode = event.keyCode;
+  if (deltaX) {
+    const minX = 0;
+    const maxX = options.fieldSize.x - options.racketWidth;
 
-  if (event.keyCode === 37) {
-    paddles[0].x -= 10;
+    let paddle = getMyPaddle();
+    paddle.x += deltaX;
 
-    if (paddles[0].x < 0) {
-      paddles[0].x = 0;
+    if (paddle.x < minX) {
+      paddle.x = minX;
+    } else if (paddle.x > maxX) {
+      paddle.x = maxX;
     }
+
+    shouldSyncPaddlePosition = true;
   }
+}
 
-  if (event.keyCode === 39) {
-    paddles[0].x += 10;
+function onKeyDown(event) {
+  pressedKeyCode = event.keyCode;
+}
 
-    if (paddles[0].x > canvas.width - paddles[0].w) {
-      paddles[0].x = canvas.width - paddles[0].w;
+function onKeyUp(event) {
+  pressedKeyCode = null;
+}
+
+function getMyPaddle() {
+  let currentPlayer = gameInfo.players.find(player => player.id === currentUserId);
+  return currentPlayer.racket;
+}
+
+function setMyPaddle(paddle) {
+  let currentPlayer = gameInfo.players.find(player => player.id === currentUserId);
+  currentPlayer.racket = paddle;
+}
+
+function findWin() {
+  gameInfo.players.forEach(player => {
+    if (player.score === 11) {
+      document.querySelector('body').classList.add('loading');
+      const loadingInfoElement = document.querySelector('.loading-info div');
+      loadingInfoElement.textContent = player.id === currentUserId ? 'You are winner!' : 'You are loser!';
+
+      setTimeout(() => {
+        document.querySelector('body').classList.remove('loading');
+        resetGame();
+      }, 3000);
     }
-  }
+  })
+}
 
-  draw();
+function setlocalStorageUserInfo(name, email) {
+  localStorage.setItem('name', name);
+  localStorage.setItem('email', email);
+}
+
+function getlocalStorageUserInfo() {
+  let name = localStorage.getItem('name');
+  let email = localStorage.getItem('email');
+
+  return {name, email};
+}
+
+function toggleClassForBody(className) {
+  document.querySelector('body').classList.toggle(className);
 }
 
 function showTimer(time) {
@@ -209,7 +360,32 @@ function generatePlayerInfoHtml(domElement, info) {
                 <span class="email">${info.email || ''}</span>
               </div>
               <img src='img/noavatar.png'>`;
-  domElement.innerHTML =html;
+  domElement.innerHTML = html;
+}
+
+function generatePlayerInfoWithScoreHtml(players) {
+  const playersAndScoreElement = document.querySelector('.players-and-score');
+  let currentUserInfo = getlocalStorageUserInfo();
+  let html = 
+  `<div class="player">
+    <img src='img/noavatar.png'>
+    <div class="name">${currentUserInfo.name || 'Anonymous'}</div>
+  </div>
+  <div class="score">0 : 0</div>
+  <div class="player">
+    <img src='img/noavatar.png'>
+    <div class="name">${opponentUserInfo.name || 'Anonymous'}</div>
+  </div>`;
+
+  playersAndScoreElement.innerHTML = html;
+}
+
+function updateScore() {
+  const scoreElement = document.querySelector('.players-and-score .score');
+  let players = gameInfo.players;
+  let currentUserInfo = players.find((user) => user.id === currentUserId);
+  let opponentUserInfo = players.find((user) => user.id !== currentUserId);
+  scoreElement.textContent = `${currentUserInfo.score} : ${opponentUserInfo.score}`;
 }
 
 function onSendMessage(data) {
@@ -218,6 +394,7 @@ function onSendMessage(data) {
 
 function onSendReady(event) {
   event.preventDefault();
+  document.querySelector('.btn-ready').disabled = true;
   onSendMessage({action: 'ready'});
 }
 
@@ -229,26 +406,19 @@ function onSendUserInfo(event) {
   for (var entry of formData.entries()) {
       result[entry[0]] = entry[1];
   }
-  
+
   onSendMessage({
     action: 'join',
     user: result
   });
 }
 
-function onSendUserPaddle(keyCode) {
+function onSendUserPaddle() {
+  let paddle = getMyPaddle();
+
   onSendMessage({
     action: 'move',
-    x: paddles[0].x,
-    y: paddles[0].y,
-    keyCode: keyCode
-  })
-}
-
-function Paddle(pos, width, height) {
-  this.h = height;
-  this.w = width;
-  
-  this.x = canvas.width/2 - this.w/2;
-  this.y = (pos === 'top') ? 0 : canvas.height - this.h;
+    x: paddle.x,
+    y: paddle.y
+  });
 }
