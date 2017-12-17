@@ -15,14 +15,17 @@ let currentUserId;
 let opponentUserInfo = {name: '', email: ''};
 
 function init() {
-  //ws = new WebSocket('wss://ping-pong-server.herokuapp.com');
-  //ws = new WebSocket('ws://localhost:3000');
   ws = new WebSocket('wss://ping-pong.10100111.space');
   ws.addEventListener('message', onUpdateData);
 
   formElement = document.getElementById('form');
   const btnSend = formElement.querySelector('button');
   btnSend.addEventListener('click', onSendUserInfo);
+  let currentUserInfo = getlocalStorageUserInfo();
+  if (currentUserInfo.name !== '' || currentUserInfo.email !== '') {
+    formElement.querySelector('input[name="name"]').value = currentUserInfo.name;
+    formElement.querySelector('input[name="email"]').value = currentUserInfo.email;
+  }
 
   const btnReady = document.querySelector('.btn-ready');
   btnReady.addEventListener('click', onSendReady);
@@ -57,7 +60,7 @@ function onUpdateData(event) {
     options = message.options;
 
     showTimer(message.countdown);
-    document.querySelector('body').classList.add('loading');
+    toggleClassForBody('loading');
 
     canvas.width = options.fieldSize.x;
     canvas.height = options.fieldSize.y;
@@ -75,7 +78,7 @@ function onUpdateData(event) {
 
     onShowGame();
   } else if (message.event === 'started') {
-    document.querySelector('body').classList.remove('loading');
+    toggleClassForBody('loading');
     gameInfo = message.game;
     generatePlayerInfoWithScoreHtml(gameInfo.players);
     document.querySelector('.btn-ready').disabled  = false;
@@ -94,7 +97,6 @@ function onUpdateData(event) {
     // const timeout = message.timeout;
     gameInfo = message.game;
     updateScore();
-    findWin();
   } else if (message.event === 'user-disconnected') {
     resetGame();
     opponentUserInfo = null;
@@ -298,21 +300,6 @@ function setMyPaddle(paddle) {
   currentPlayer.racket = paddle;
 }
 
-function findWin() {
-  gameInfo.players.forEach(player => {
-    if (player.score === 11) {
-      document.querySelector('body').classList.add('loading');
-      const loadingInfoElement = document.querySelector('.loading-info div');
-      loadingInfoElement.textContent = player.id === currentUserId ? 'You are winner!' : 'You are loser!';
-
-      setTimeout(() => {
-        document.querySelector('body').classList.remove('loading');
-        resetGame();
-      }, 3000);
-    }
-  })
-}
-
 function setlocalStorageUserInfo(name, email) {
   localStorage.setItem('name', name);
   localStorage.setItem('email', email);
@@ -355,11 +342,17 @@ function onLoadSecondPlayerInfo(info) {
 }
 
 function generatePlayerInfoHtml(domElement, info) {
+  let img = 'img/noavatar.png';
+  if (info.email && info.email !== '') {
+    //getAvatar(info.email, domElement);
+    img = gravatar(info.email, {size: 200});
+  }
+
   let html = `<div class="pesonal-info">
                 <div class="name">${info.name || 'Anonymous'}</div> <br>
                 <span class="email">${info.email || ''}</span>
               </div>
-              <img src='img/noavatar.png'>`;
+              <img src=${img}>`;
   domElement.innerHTML = html;
 }
 
@@ -421,4 +414,20 @@ function onSendUserPaddle() {
     x: paddle.x,
     y: paddle.y
   });
+}
+
+// TODO: blocked by CORS policy.
+function getAvatar(email, domElement) {
+  const request = new XMLHttpRequest();
+  const url = gravatar(email) + '.json';
+  request.open('GET', url);
+  request.addEventListener('load', () => onLoadAvatar(domElement))
+  request.send();
+}
+
+function onLoadAvatar(domElement) {
+  if (request.status === 200) {
+    const response = JSON.parse(request.responseText);
+    domElement.querySelector('img').src = response.entries[0].photos[0].value;
+  }
 }
