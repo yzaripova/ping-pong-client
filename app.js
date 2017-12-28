@@ -12,6 +12,7 @@ let stopToken = { stop: true };
 let shouldSyncPaddlePosition = false;
 let pressedKeyCode;
 let currentUserId;
+let currentUserInfo = {name: '', email: ''};
 let opponentUserInfo = {name: '', email: ''};
 
 function init() {
@@ -42,7 +43,8 @@ function onUpdateData(event) {
   if (message.event === 'connected') {
     const lobbyData = message.lobby;
     currentUserId = message.user.id;
-    setlocalStorageUserInfo(message.user.name, message.user.email);
+    currentUserInfo = {name: message.user.name, email: message.user.email};
+    setlocalStorageUserInfo(currentUserInfo.name, currentUserInfo.email);
 
     if (lobbyData.users.length > 1) {
       onLoadFirstPlayerInfo(lobbyData.users[1]);
@@ -53,7 +55,6 @@ function onUpdateData(event) {
 
     onShowLobby();
   } else if (message.event === 'user-connected') {
-    opponentUserInfo = message.user;
     onLoadSecondPlayerInfo(message.user);
   } else if (message.event === 'get-ready') {
     gameInfo = message.game;
@@ -99,9 +100,10 @@ function onUpdateData(event) {
     updateScore();
   } else if (message.event === 'user-disconnected') {
     resetGame();
+    currentUserInfo = null;
     opponentUserInfo = null;
     document.querySelector('.second-player')
-            .innerHTML(`<div class="waiting">Waiting for opponent...</div>`);
+            .innerHTML = `<div class="waiting">Waiting for opponent...</div>`;
   }
 }
 
@@ -338,6 +340,7 @@ function onLoadFirstPlayerInfo(info) {
 
 function onLoadSecondPlayerInfo(info) {
   const secondPlayerElement = document.querySelector('.second-player');
+  opponentUserInfo = info;
   generatePlayerInfoHtml(secondPlayerElement, info);
 }
 
@@ -358,9 +361,8 @@ function generatePlayerInfoHtml(domElement, info) {
 
 function generatePlayerInfoWithScoreHtml(players) {
   const playersAndScoreElement = document.querySelector('.players-and-score');
-  let currentUserInfo = getlocalStorageUserInfo();
-  let imgCurrentUser = currentUserInfo.email === '' ? gravatar(currentUserInfo.email, {size: 200}) : 'img/noavatar.png';
-  let imgOpponentUser = opponentUserInfo.email === '' ? gravatar(opponentUserInfo.email, {size: 200}) : 'img/noavatar.png';
+  let imgCurrentUser = currentUserInfo.email !== '' ? gravatar(currentUserInfo.email, {size: 200}) : 'img/noavatar.png';
+  let imgOpponentUser = opponentUserInfo.email !== '' ? gravatar(opponentUserInfo.email, {size: 200}) : 'img/noavatar.png';
   let html = 
   `<div class="player">
     <img src=${imgCurrentUser}>
@@ -419,7 +421,7 @@ function onSendUserPaddle() {
 }
 
 // TODO: blocked by CORS policy.
-function getAvatar(email, domElement) {
+/*function getAvatar(email, domElement) {
   const request = new XMLHttpRequest();
   const url = gravatar(email) + '.json';
   request.open('GET', url);
@@ -432,4 +434,4 @@ function onLoadAvatar(domElement) {
     const response = JSON.parse(request.responseText);
     domElement.querySelector('img').src = response.entries[0].photos[0].value;
   }
-}
+}*/
