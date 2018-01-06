@@ -102,9 +102,22 @@ function onUpdateData(event) {
     resetGame();
     currentUserInfo = null;
     opponentUserInfo = null;
-    document.querySelector('.second-player')
-            .innerHTML = `<div class="waiting">Waiting for opponent...</div>`;
+    onShowWaitingMessage();    
   }
+}
+
+function onShowWaitingMessage() {
+  let secondPlayerElement = document.querySelector('.second-player');
+  let newDiv = document.createElement('div');
+  newDiv.className = 'waiting';
+  newDiv.textContent = 'Waiting for opponent...';
+
+  let children = secondPlayerElement.children;
+  if (children.length > 0) {
+    Array.from(children).forEach(child => secondPlayerElement.removeChild(child));
+  }
+  
+  secondPlayerElement.appendChild(newDiv);
 }
 
 function onShowLobby() {
@@ -345,36 +358,72 @@ function onLoadSecondPlayerInfo(info) {
 }
 
 function generatePlayerInfoHtml(domElement, info) {
-  let img = 'img/noavatar.png';
+  let imgSrc = 'img/noavatar.png';
   if (info.email && info.email !== '') {
     //getAvatar(info.email, domElement);
-    img = gravatar(info.email, {size: 200});
+    imgSrc = gravatar(info.email, {size: 200});
   }
 
-  let html = `<div class="pesonal-info">
-                <div class="name">${info.name || 'Anonymous'}</div> <br>
-                <span class="email">${info.email || ''}</span>
-              </div>
-              <img src=${img}>`;
-  domElement.innerHTML = html;
+  let personalInfoElement = document.createElement('div');
+  personalInfoElement.className = 'pesonal-info';
+
+  let imgElement = document.createElement('img');
+  imgElement.src = imgSrc;
+
+  let nameElement = document.createElement('div');
+  nameElement.className = 'name';
+  nameElement.textContent = info.name || 'Anonymous';
+
+  let emailElement = document.createElement('div');
+  emailElement.className = 'email';
+  emailElement.textContent = info.email || '';
+
+  personalInfoElement.appendChild(nameElement);
+  personalInfoElement.appendChild(emailElement);
+  
+  if (domElement.children.length > 0) {
+    domElement.replaceChild(personalInfoElement, domElement.children[0]);
+  } else {
+    domElement.appendChild(personalInfoElement);
+  }
+  
+  domElement.appendChild(imgElement);
 }
 
 function generatePlayerInfoWithScoreHtml(players) {
   const playersAndScoreElement = document.querySelector('.players-and-score');
   let imgCurrentUser = currentUserInfo.email !== '' ? gravatar(currentUserInfo.email, {size: 200}) : 'img/noavatar.png';
   let imgOpponentUser = opponentUserInfo.email !== '' ? gravatar(opponentUserInfo.email, {size: 200}) : 'img/noavatar.png';
-  let html = 
-  `<div class="player">
-    <img src=${imgCurrentUser}>
-    <div class="name">${currentUserInfo.name || 'Anonymous'}</div>
-  </div>
-  <div class="score">0 : 0</div>
-  <div class="player">
-    <img src=${imgOpponentUser}>
-    <div class="name">${opponentUserInfo.name || 'Anonymous'}</div>
-  </div>`;
 
-  playersAndScoreElement.innerHTML = html;
+  let imgElementCurrentUser = document.createElement('img');
+  let imgElementOpponentUser = document.createElement('img');
+  imgElementCurrentUser.src = imgCurrentUser;
+  imgElementOpponentUser.src = imgOpponentUser;
+
+  let playerElementCurrentUser = document.createElement('div');
+  let playerElementOpponentUser = document.createElement('div');
+  playerElementCurrentUser.className = 'player';
+  playerElementOpponentUser.className = 'player';
+
+  let nameElementCurrentUser = document.createElement('div');
+  let nameElementOpponentUser = document.createElement('div');
+  nameElementCurrentUser.className = 'name';
+  nameElementOpponentUser.className = 'name';
+  nameElementCurrentUser.textContent = currentUserInfo.name || 'Anonymous';
+  nameElementOpponentUser.textContent = opponentUserInfo.name || 'Anonymous';
+
+  let scoreElement = document.createElement('div');
+  scoreElement.className = 'score';
+  scoreElement.textContent = '0 : 0';
+
+  playerElementCurrentUser.appendChild(imgElementCurrentUser);
+  playerElementCurrentUser.appendChild(nameElementCurrentUser);
+  playerElementOpponentUser.appendChild(imgElementOpponentUser);
+  playerElementOpponentUser.appendChild(nameElementOpponentUser);
+
+  playersAndScoreElement.appendChild(playerElementCurrentUser);
+  playersAndScoreElement.appendChild(scoreElement);
+  playersAndScoreElement.appendChild(playerElementOpponentUser);
 }
 
 function updateScore() {
