@@ -108,9 +108,7 @@ function onUpdateData(event) {
 
 function onShowWaitingMessage() {
   let secondPlayerElement = document.querySelector('.second-player');
-  let newDiv = document.createElement('div');
-  newDiv.className = 'waiting';
-  newDiv.textContent = 'Waiting for opponent...';
+  let newDiv = makeHTMLtag('div', {className: 'waiting'}, 'Waiting for opponent...');
 
   let children = secondPlayerElement.children;
   if (children.length > 0) {
@@ -364,19 +362,10 @@ function generatePlayerInfoHtml(domElement, info) {
     imgSrc = gravatar(info.email, {size: 200});
   }
 
-  let personalInfoElement = document.createElement('div');
-  personalInfoElement.className = 'pesonal-info';
-
-  let imgElement = document.createElement('img');
-  imgElement.src = imgSrc;
-
-  let nameElement = document.createElement('div');
-  nameElement.className = 'name';
-  nameElement.textContent = info.name || 'Anonymous';
-
-  let emailElement = document.createElement('div');
-  emailElement.className = 'email';
-  emailElement.textContent = info.email || '';
+  let personalInfoElement = makeHTMLtag('div', {className: 'pesonal-info'}, '');
+  let imgElement = makeHTMLtag('img', {src: imgSrc});
+  let nameElement = makeHTMLtag('div', {className: 'name'}, info.name || 'Anonymous');
+  let emailElement = makeHTMLtag('div', {className: 'email'}, info.email || '');
 
   personalInfoElement.appendChild(nameElement);
   personalInfoElement.appendChild(emailElement);
@@ -395,26 +384,13 @@ function generatePlayerInfoWithScoreHtml(players) {
   let imgCurrentUser = currentUserInfo.email !== '' ? gravatar(currentUserInfo.email, {size: 200}) : 'img/noavatar.png';
   let imgOpponentUser = opponentUserInfo.email !== '' ? gravatar(opponentUserInfo.email, {size: 200}) : 'img/noavatar.png';
 
-  let imgElementCurrentUser = document.createElement('img');
-  let imgElementOpponentUser = document.createElement('img');
-  imgElementCurrentUser.src = imgCurrentUser;
-  imgElementOpponentUser.src = imgOpponentUser;
-
-  let playerElementCurrentUser = document.createElement('div');
-  let playerElementOpponentUser = document.createElement('div');
-  playerElementCurrentUser.className = 'player';
-  playerElementOpponentUser.className = 'player';
-
-  let nameElementCurrentUser = document.createElement('div');
-  let nameElementOpponentUser = document.createElement('div');
-  nameElementCurrentUser.className = 'name';
-  nameElementOpponentUser.className = 'name';
-  nameElementCurrentUser.textContent = currentUserInfo.name || 'Anonymous';
-  nameElementOpponentUser.textContent = opponentUserInfo.name || 'Anonymous';
-
-  let scoreElement = document.createElement('div');
-  scoreElement.className = 'score';
-  scoreElement.textContent = '0 : 0';
+  let imgElementCurrentUser = makeHTMLtag('img', {src: imgCurrentUser}, '');
+  let imgElementOpponentUser = makeHTMLtag('img', {src: imgOpponentUser}, '');
+  let playerElementCurrentUser = makeHTMLtag('div', {className: 'player'}, '');
+  let playerElementOpponentUser = makeHTMLtag('div', {className: 'player'}, '');
+  let nameElementCurrentUser = makeHTMLtag('div', {className: 'name'}, currentUserInfo.name || 'Anonymous');
+  let nameElementOpponentUser = makeHTMLtag('div', {className: 'name'}, opponentUserInfo.name || 'Anonymous');
+  let scoreElement = makeHTMLtag('div', {className: 'score'}, '0 : 0');
 
   playerElementCurrentUser.appendChild(imgElementCurrentUser);
   playerElementCurrentUser.appendChild(nameElementCurrentUser);
@@ -484,3 +460,16 @@ function onLoadAvatar(domElement) {
     domElement.querySelector('img').src = response.entries[0].photos[0].value;
   }
 }*/
+
+function makeHTMLtag(tagName, attrs, textContent) {
+  let newTag = document.createElement(tagName);
+  if (textContent !== '') {
+    newTag.textContent = textContent;
+  }
+
+  for (let key in attrs) {
+    newTag[key] = attrs[key];
+  }
+
+  return newTag;
+}
