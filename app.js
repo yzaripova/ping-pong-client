@@ -362,13 +362,11 @@ function generatePlayerInfoHtml(domElement, info) {
     imgSrc = gravatar(info.email, {size: 200});
   }
 
-  let personalInfoElement = makeHTMLtag('div', {className: 'pesonal-info'}, '');
   let imgElement = makeHTMLtag('img', {src: imgSrc});
   let nameElement = makeHTMLtag('div', {className: 'name'}, info.name || 'Anonymous');
   let emailElement = makeHTMLtag('div', {className: 'email'}, info.email || '');
-
-  personalInfoElement.appendChild(nameElement);
-  personalInfoElement.appendChild(emailElement);
+  let personalInfoElement = makeHTMLtag('div', {className: 'pesonal-info'}, '', 
+                                        nameElement, emailElement);
   
   if (domElement.children.length > 0) {
     domElement.replaceChild(personalInfoElement, domElement.children[0]);
@@ -386,16 +384,14 @@ function generatePlayerInfoWithScoreHtml(players) {
 
   let imgElementCurrentUser = makeHTMLtag('img', {src: imgCurrentUser}, '');
   let imgElementOpponentUser = makeHTMLtag('img', {src: imgOpponentUser}, '');
-  let playerElementCurrentUser = makeHTMLtag('div', {className: 'player'}, '');
-  let playerElementOpponentUser = makeHTMLtag('div', {className: 'player'}, '');
   let nameElementCurrentUser = makeHTMLtag('div', {className: 'name'}, currentUserInfo.name || 'Anonymous');
   let nameElementOpponentUser = makeHTMLtag('div', {className: 'name'}, opponentUserInfo.name || 'Anonymous');
+  let playerElementCurrentUser = makeHTMLtag('div', {className: 'player'}, '',
+                                              imgElementCurrentUser, nameElementCurrentUser);
+  let playerElementOpponentUser = makeHTMLtag('div', {className: 'player'}, '',
+                                              imgElementOpponentUser, nameElementOpponentUser);
+ 
   let scoreElement = makeHTMLtag('div', {className: 'score'}, '0 : 0');
-
-  playerElementCurrentUser.appendChild(imgElementCurrentUser);
-  playerElementCurrentUser.appendChild(nameElementCurrentUser);
-  playerElementOpponentUser.appendChild(imgElementOpponentUser);
-  playerElementOpponentUser.appendChild(nameElementOpponentUser);
 
   playersAndScoreElement.appendChild(playerElementCurrentUser);
   playersAndScoreElement.appendChild(scoreElement);
@@ -461,7 +457,7 @@ function onLoadAvatar(domElement) {
   }
 }*/
 
-function makeHTMLtag(tagName, attrs, textContent) {
+function makeHTMLtag(tagName, attrs, textContent, ...children) {
   let newTag = document.createElement(tagName);
   if (textContent !== '') {
     newTag.textContent = textContent;
@@ -470,6 +466,10 @@ function makeHTMLtag(tagName, attrs, textContent) {
   for (let key in attrs) {
     newTag[key] = attrs[key];
   }
+
+  children.forEach(child => {
+    newTag.appendChild(child);
+  });
 
   return newTag;
 }
