@@ -108,14 +108,12 @@ function onUpdateData(event) {
 
 function onShowWaitingMessage() {
   let secondPlayerElement = document.querySelector('.second-player');
-  let newDiv = makeHTMLtag('div', {className: 'waiting'}, 'Waiting for opponent...');
-
   let children = secondPlayerElement.children;
   if (children.length > 0) {
     Array.from(children).forEach(child => secondPlayerElement.removeChild(child));
   }
   
-  secondPlayerElement.appendChild(newDiv);
+  secondPlayerElement.appendChild(makeHTMLtag('div', {className: 'waiting'}, 'Waiting for opponent...'));
 }
 
 function onShowLobby() {
@@ -362,11 +360,10 @@ function generatePlayerInfoHtml(domElement, info) {
     imgSrc = gravatar(info.email, {size: 200});
   }
 
-  let imgElement = makeHTMLtag('img', {src: imgSrc});
-  let nameElement = makeHTMLtag('div', {className: 'name'}, info.name || 'Anonymous');
-  let emailElement = makeHTMLtag('div', {className: 'email'}, info.email || '');
   let personalInfoElement = makeHTMLtag('div', {className: 'pesonal-info'}, '', 
-                                        nameElement, emailElement);
+                                        makeHTMLtag('div', {className: 'name'}, info.name || 'Anonymous'),
+                                        makeHTMLtag('div', {className: 'email'}, info.email || '')
+                            );
   
   if (domElement.children.length > 0) {
     domElement.replaceChild(personalInfoElement, domElement.children[0]);
@@ -374,7 +371,7 @@ function generatePlayerInfoHtml(domElement, info) {
     domElement.appendChild(personalInfoElement);
   }
   
-  domElement.appendChild(imgElement);
+  domElement.appendChild(makeHTMLtag('img', {src: imgSrc}));
 }
 
 function generatePlayerInfoWithScoreHtml(players) {
@@ -382,20 +379,15 @@ function generatePlayerInfoWithScoreHtml(players) {
   let imgCurrentUser = currentUserInfo.email !== '' ? gravatar(currentUserInfo.email, {size: 200}) : 'img/noavatar.png';
   let imgOpponentUser = opponentUserInfo.email !== '' ? gravatar(opponentUserInfo.email, {size: 200}) : 'img/noavatar.png';
 
-  let imgElementCurrentUser = makeHTMLtag('img', {src: imgCurrentUser}, '');
-  let imgElementOpponentUser = makeHTMLtag('img', {src: imgOpponentUser}, '');
-  let nameElementCurrentUser = makeHTMLtag('div', {className: 'name'}, currentUserInfo.name || 'Anonymous');
-  let nameElementOpponentUser = makeHTMLtag('div', {className: 'name'}, opponentUserInfo.name || 'Anonymous');
-  let playerElementCurrentUser = makeHTMLtag('div', {className: 'player'}, '',
-                                              imgElementCurrentUser, nameElementCurrentUser);
-  let playerElementOpponentUser = makeHTMLtag('div', {className: 'player'}, '',
-                                              imgElementOpponentUser, nameElementOpponentUser);
- 
-  let scoreElement = makeHTMLtag('div', {className: 'score'}, '0 : 0');
-
-  playersAndScoreElement.appendChild(playerElementCurrentUser);
-  playersAndScoreElement.appendChild(scoreElement);
-  playersAndScoreElement.appendChild(playerElementOpponentUser);
+  playersAndScoreElement.appendChild(makeHTMLtag('div', {className: 'player'}, '',
+                                              makeHTMLtag('img', {src: imgCurrentUser}, ''),
+                                              makeHTMLtag('div', {className: 'name'}, currentUserInfo.name || 'Anonymous')
+                                    ));
+  playersAndScoreElement.appendChild(makeHTMLtag('div', {className: 'score'}, '0 : 0'));
+  playersAndScoreElement.appendChild(makeHTMLtag('div', {className: 'player'}, '',
+                                              makeHTMLtag('img', {src: imgOpponentUser}, ''),
+                                              makeHTMLtag('div', {className: 'name'}, opponentUserInfo.name || 'Anonymous')
+                                    ));
 }
 
 function updateScore() {
@@ -457,18 +449,19 @@ function onLoadAvatar(domElement) {
   }
 }*/
 
-function makeHTMLtag(tagName, attrs, textContent, ...children) {
+function makeHTMLtag(tagName, attrs, ...children) {
   let newTag = document.createElement(tagName);
-  if (textContent !== '') {
-    newTag.textContent = textContent;
-  }
 
   for (let key in attrs) {
     newTag[key] = attrs[key];
   }
 
   children.forEach(child => {
-    newTag.appendChild(child);
+    if (typeof child === 'string') {
+      newTag.textContent = child;
+    } else {
+      newTag.appendChild(child);
+    }
   });
 
   return newTag;
