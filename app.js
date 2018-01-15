@@ -458,7 +458,7 @@ function makeHTMLtag(tagName, attrs, ...children) {
 
   children.forEach(child => {
     if (typeof child === 'string') {
-      newTag.textContent = child;
+      newTag.appendChild(document.createTextNode(child));
     } else {
       newTag.appendChild(child);
     }
