@@ -457,11 +457,14 @@ function makeHTMLtag(tagName, attrs, ...children) {
   }
 
   children.forEach(child => {
+    let elem;
     if (typeof child === 'string') {
-      newTag.appendChild(document.createTextNode(child));
+      elem = document.createTextNode(child);
     } else {
-      newTag.appendChild(child);
+      elem = child;
     }
+
+    newTag.appendChild(elem);
   });
 
   return newTag;
