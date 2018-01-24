@@ -1,5 +1,23 @@
 'use strict';
 
+function makeHTMLtag(tagName, attrs, ...children) {
+  let newTag = document.createElement(tagName);
+
+  for (let key in attrs) {
+    newTag[key] = attrs[key];
+  }
+
+  children.forEach(child => {
+    if (typeof child === 'string') {
+      child = document.createTextNode(child);
+    }
+
+    newTag.appendChild(child);
+  });
+
+  return newTag;
+}
+
 document.addEventListener('DOMContentLoaded', init);
 
 let ws;
@@ -14,10 +32,20 @@ let pressedKeyCode;
 let currentUserId;
 let currentUserInfo = {name: '', email: ''};
 let opponentUserInfo = {name: '', email: ''};
+let socketEventHandlers = {
+  'connected': onConnected,
+  'user-connected': onUserConnected,
+  'get-ready': onGetReady,
+  'started': onStarted,
+  'sync': onSync,
+  'score': onScore,
+  'user-disconnected': onUserDisconnected
+};
+
 
 function init() {
   ws = new WebSocket('wss://ping-pong.10100111.space');
-  ws.addEventListener('message', onUpdateData);
+  ws.addEventListener('message', onSocketMessage);
 
   formElement = document.getElementById('form');
   const btnSend = formElement.querySelector('button');
@@ -37,73 +65,86 @@ function init() {
   document.addEventListener('keyup', onKeyUp, false);
 }
 
-function onUpdateData(event) {
+function onSocketMessage(event) {
   let message = JSON.parse(event.data);
 
-  if (message.event === 'connected') {
-    const lobbyData = message.lobby;
-    currentUserId = message.user.id;
-    currentUserInfo = {name: message.user.name, email: message.user.email};
-    setlocalStorageUserInfo(currentUserInfo.name, currentUserInfo.email);
-
-    if (lobbyData.users.length > 1) {
-      onLoadFirstPlayerInfo(lobbyData.users[1]);
-      onLoadSecondPlayerInfo(lobbyData.users[0]);
-    } else {
-      onLoadFirstPlayerInfo(lobbyData.users[0]);
-    }
-
-    onShowLobby();
-  } else if (message.event === 'user-connected') {
-    onLoadSecondPlayerInfo(message.user);
-  } else if (message.event === 'get-ready') {
-    gameInfo = message.game;
-    options = message.options;
-
-    showTimer(message.countdown);
-    toggleClassForBody('loading');
-
-    canvas.width = options.fieldSize.x;
-    canvas.height = options.fieldSize.y;
-
-    console.log(
-      'Running with ' + options.fps + ' fps, '
-        + options.tickRate + ' tick rate.'
-    );
-
-    stopToken.stop = false;
-    animate({
-      fps: options.fps,
-      stopToken: stopToken
-    }, drawFrame);
-
-    onShowGame();
-  } else if (message.event === 'started') {
-    toggleClassForBody('loading');
-    gameInfo = message.game;
-    generatePlayerInfoWithScoreHtml(gameInfo.players);
-    document.querySelector('.btn-ready').disabled  = false;
-  } else if (message.event === 'sync') {
-    if (shouldSyncPaddlePosition) {
-      let localPaddle = getMyPaddle();
-      gameInfo = message.game;
-      setMyPaddle(localPaddle);
-
-      shouldSyncPaddlePosition = false;
-      onSendUserPaddle();
-    } else {
-      gameInfo = message.game;
-    }
-  } else if (message.event === 'score') {
-    // const timeout = message.timeout;
-    gameInfo = message.game;
-    updateScore();
-  } else if (message.event === 'user-disconnected') {
-    resetGame();
-    currentUserInfo = null;
-    opponentUserInfo = null;
-    onShowWaitingMessage();    
+  let handler = socketEventHandlers[message.event];
+  if (handler) {
+    handler(message);
+  } else {
+    throw new Error(`Handler doesn't exist: ${message.event}`);
   }
+}
+
+function onConnected(message) {
+  const lobbyData = message.lobby;
+  currentUserId = message.user.id;
+  currentUserInfo = {name: message.user.name, email: message.user.email};
+  setlocalStorageUserInfo(currentUserInfo.name, currentUserInfo.email);
+
+  if (lobbyData.users.length > 1) {
+    onLoadFirstPlayerInfo(lobbyData.users[1]);
+    onLoadSecondPlayerInfo(lobbyData.users[0]);
+  } else {
+    onLoadFirstPlayerInfo(lobbyData.users[0]);
+  }
+
+  onShowLobby();
+}
+
+function onUserConnected(message) {
+  onLoadSecondPlayerInfo(message.user);
+}
+
+function onGetReady(message) {
+  gameInfo = message.game;
+  options = message.options;
+
+  showTimer(message.countdown);
+  toggleClassForBody('loading');
+
+  canvas.width = options.fieldSize.x;
+  canvas.height = options.fieldSize.y;
+
+  stopToken.stop = false;
+  animate({
+    fps: options.fps,
+    stopToken: stopToken
+  }, drawFrame);
+
+  onShowGame();
+}
+
+function onStarted(message) {
+ toggleClassForBody('loading');
+ gameInfo = message.game;
+ generatePlayerInfoWithScoreHtml(gameInfo.players);
+ document.querySelector('.btn-ready').disabled  = false;
+}
+
+function onSync(message) {
+  if (shouldSyncPaddlePosition) {
+    let localPaddle = getMyPaddle();
+    gameInfo = message.game;
+    setMyPaddle(localPaddle);
+
+    shouldSyncPaddlePosition = false;
+    onSendUserPaddle();
+  } else {
+    gameInfo = message.game;
+  }
+}
+
+function onScore(message) {
+ gameInfo = message.game;
+ updateScore();
+}
+
+function onUserDisconnected(message) {
+  resetGame();
+  currentUserInfo = null;
+  opponentUserInfo = null;
+  onShowWaitingMessage();    
 }
 
 function onShowWaitingMessage() {
@@ -234,7 +275,7 @@ function predictNextFrame() {
 
 function computeHorizRacketCollision(player, ball) {
   const collision = ball.x > player.racket.x - options.ballSize
-        && ball.x < player.racket.x + options.racketWidth;
+  && ball.x < player.racket.x + options.racketWidth;
 
   if (collision) {
     ball.velocity.y *= -1;
@@ -262,7 +303,7 @@ function drawPaddles() {
       paddle.y,
       options.racketWidth,
       options.racketThickness
-    );
+      );
   });
 }
 
@@ -361,9 +402,9 @@ function generatePlayerInfoHtml(domElement, info) {
   }
 
   let personalInfoElement = makeHTMLtag('div', {className: 'pesonal-info'}, '', 
-                                        makeHTMLtag('div', {className: 'name'}, info.name || 'Anonymous'),
-                                        makeHTMLtag('div', {className: 'email'}, info.email || '')
-                            );
+    makeHTMLtag('div', {className: 'name'}, info.name || 'Anonymous'),
+    makeHTMLtag('div', {className: 'email'}, info.email || '')
+    );
   
   if (domElement.children.length > 0) {
     domElement.replaceChild(personalInfoElement, domElement.children[0]);
@@ -380,14 +421,14 @@ function generatePlayerInfoWithScoreHtml(players) {
   let imgOpponentUser = opponentUserInfo.email !== '' ? gravatar(opponentUserInfo.email, {size: 200}) : 'img/noavatar.png';
 
   playersAndScoreElement.appendChild(makeHTMLtag('div', {className: 'player'}, '',
-                                              makeHTMLtag('img', {src: imgCurrentUser}, ''),
-                                              makeHTMLtag('div', {className: 'name'}, currentUserInfo.name || 'Anonymous')
-                                    ));
+    makeHTMLtag('img', {src: imgCurrentUser}, ''),
+    makeHTMLtag('div', {className: 'name'}, currentUserInfo.name || 'Anonymous')
+  ));
   playersAndScoreElement.appendChild(makeHTMLtag('div', {className: 'score'}, '0 : 0'));
   playersAndScoreElement.appendChild(makeHTMLtag('div', {className: 'player'}, '',
-                                              makeHTMLtag('img', {src: imgOpponentUser}, ''),
-                                              makeHTMLtag('div', {className: 'name'}, opponentUserInfo.name || 'Anonymous')
-                                    ));
+    makeHTMLtag('img', {src: imgOpponentUser}, ''),
+    makeHTMLtag('div', {className: 'name'}, opponentUserInfo.name || 'Anonymous')
+  ));
 }
 
 function updateScore() {
@@ -414,7 +455,7 @@ function onSendUserInfo(event) {
   let result = {};
 
   for (var entry of formData.entries()) {
-      result[entry[0]] = entry[1];
+    result[entry[0]] = entry[1];
   }
 
   onSendMessage({
@@ -449,23 +490,3 @@ function onLoadAvatar(domElement) {
   }
 }*/
 
-function makeHTMLtag(tagName, attrs, ...children) {
-  let newTag = document.createElement(tagName);
-
-  for (let key in attrs) {
-    newTag[key] = attrs[key];
-  }
-
-  children.forEach(child => {
-    let elem;
-    if (typeof child === 'string') {
-      elem = document.createTextNode(child);
-    } else {
-      elem = child;
-    }
-
-    newTag.appendChild(elem);
-  });
-
-  return newTag;
-}
