@@ -209,3 +209,7 @@ body {
 #canvas {
   transform: perspective(670px) rotateX(41deg) translateY(-52px);
 }
+
+.transform-canvas #canvas {
+  transform: perspective(670px) rotate(180deg) rotateX(-41deg) translateY(52px);
+}

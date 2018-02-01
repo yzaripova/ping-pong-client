@@ -48,8 +48,7 @@ function init() {
   ws.addEventListener('message', onSocketMessage);
 
   formElement = document.getElementById('form');
-  const btnSend = formElement.querySelector('button');
-  btnSend.addEventListener('click', onSendUserInfo);
+  formElement.addEventListener('submit', onSendUserInfo);
   let currentUserInfo = getlocalStorageUserInfo();
   if (currentUserInfo.name !== '' || currentUserInfo.email !== '') {
     formElement.querySelector('input[name="name"]').value = currentUserInfo.name;
