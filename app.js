@@ -29,6 +29,7 @@ let gameInfo;
 let stopToken = { stop: true };
 let shouldSyncPaddlePosition = false;
 let pressedKeyCode;
+let rotateField = false;
 let currentUserId;
 let currentUserInfo = {name: '', email: ''};
 let opponentUserInfo = {name: '', email: ''};
@@ -86,6 +87,8 @@ function onConnected(message) {
     onLoadSecondPlayerInfo(lobbyData.users[0]);
   } else {
     onLoadFirstPlayerInfo(lobbyData.users[0]);
+    rotateField = true;
+    document.querySelector('body').classList.add('transform-canvas');
   }
 
   onShowLobby();
@@ -314,6 +317,10 @@ function movePaddle() {
     deltaX = -moveSpeed;
   } else if (pressedKeyCode === 39) {
     deltaX = moveSpeed;
+  }
+
+  if (rotateField) {
+    deltaX *= -1;
   }
 
   if (deltaX) {
